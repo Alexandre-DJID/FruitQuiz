@@ -83,7 +83,7 @@ class AproposPage extends StatelessWidget {
                     emoji: '👨‍💻',
                     titre: 'Réalisé par',
                     contenu:
-                        'Un étudiant passionné de développement mobile.\n'
+                        'Des étudiants passionnés de développement mobile.\n'
                         'Projet scolaire — Cours d\'initiation Flutter.',
                   ),
 
@@ -94,7 +94,7 @@ class AproposPage extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final Uri url = Uri.parse('https://rab-tech.com');
+                        final Uri url = Uri.parse('https://flutter.dev');
                         launchUrl(url);
                       },
                       icon: const Icon(Icons.open_in_browser),

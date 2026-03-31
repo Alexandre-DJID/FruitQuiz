@@ -15,12 +15,13 @@ class _JeuPageState extends State<JeuPage> {
   int score = 0;
   int tempsRestant = 3;
   Timer? timerJeu;
+  bool jeuEnCours = true;
   Timer? timerCompte;
 
-  // Liste de fruits : le fruit cible et les leurres
   final List<String> fruits = ['🍎', '🍊', '🍋', '🍇', '🍓', '🍍', '🥭', '🍑', '🫐'];
   String fruitCible = '🍎';
   List<String> fruitsAffiches = [];
+  int carteSelectionnee = -1;
 
   @override
   void initState() {
@@ -36,13 +37,112 @@ class _JeuPageState extends State<JeuPage> {
     timerCompte?.cancel();
     tempsRestant = 3;
     timerCompte = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
       setState(() {
         tempsRestant--;
-        if (tempsRestant <= 0) {
-          t.cancel();
-        }
       });
+      if (tempsRestant <= 0) {
+        t.cancel();
+        timerJeu?.cancel();
+        jeuEnCours = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _afficherGameOver();
+        });
+      }
     });
+  }
+
+  void _afficherGameOver() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Column(
+            children: [
+              Text('😢', style: TextStyle(fontSize: 52)),
+              SizedBox(height: 8),
+              Text(
+                'Temps ecoulé !',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Tu n\'as pas trouvé le fruit à temps.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Score final : $score pts',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  score = 0;
+                  jeuEnCours = true;
+                });
+                timerJeu = Timer.periodic(const Duration(seconds: 3), (timer) {
+                  nouveauJeu();
+                });
+                nouveauJeu();
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Rejouer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.home_rounded),
+              label: const Text('Accueil'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF2E7D32),
+                side: const BorderSide(color: Color(0xFF2E7D32)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -60,14 +160,11 @@ class _JeuPageState extends State<JeuPage> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-
-            // Score + timer
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Score
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
@@ -89,8 +186,6 @@ class _JeuPageState extends State<JeuPage> {
                       ],
                     ),
                   ),
-
-                  // Timer
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
@@ -117,10 +212,7 @@ class _JeuPageState extends State<JeuPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Consigne : trouver le fruit cible
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -133,17 +225,11 @@ class _JeuPageState extends State<JeuPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('Trouve : ', style: TextStyle(fontSize: 18)),
-                  Text(
-                    fruitCible,
-                    style: const TextStyle(fontSize: 36),
-                  ),
+                  Text(fruitCible, style: const TextStyle(fontSize: 36)),
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Grille 3x3
             Expanded(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
@@ -159,10 +245,7 @@ class _JeuPageState extends State<JeuPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Règles
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
@@ -184,6 +267,7 @@ class _JeuPageState extends State<JeuPage> {
       child: GestureDetector(
         onTap: () {
           setState(() {
+            carteSelectionnee = position;
             if (estLaBonne) {
               score += 5;
             } else {
@@ -191,15 +275,21 @@ class _JeuPageState extends State<JeuPage> {
               if (score < 0) score = 0;
             }
           });
-          nouveauJeu();
+          Future.delayed(const Duration(milliseconds: 400), () {
+            nouveauJeu();
+          });
         },
         child: Container(
           margin: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F8E9),
+            color: carteSelectionnee == position
+                ? (estLaBonne ? const Color(0xFF4CAF50) : const Color(0xFFE53935))
+                : const Color(0xFFF1F8E9),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF81C784),
+              color: carteSelectionnee == position
+                  ? (estLaBonne ? const Color(0xFF2E7D32) : const Color(0xFFB71C1C))
+                  : const Color(0xFF81C784),
               width: 2,
             ),
             boxShadow: [
@@ -222,15 +312,11 @@ class _JeuPageState extends State<JeuPage> {
   }
 
   void nouveauJeu() {
+    if (!jeuEnCours) return;
     final random = Random();
-
-    // Choisir un fruit cible aléatoire
     fruitCible = fruits[random.nextInt(fruits.length)];
-
-    // Construire la grille de 9 cases : 1 bonne + 8 leurres
     positionBonFruit = random.nextInt(9) + 1;
 
-    // Leurres = tous les autres fruits sauf le fruit cible
     final List<String> leurres = fruits.where((f) => f != fruitCible).toList();
     leurres.shuffle();
 
@@ -239,10 +325,10 @@ class _JeuPageState extends State<JeuPage> {
       return leurres[index % leurres.length];
     });
 
-    // Redémarrer le compte à rebours
     timerCompte?.cancel();
     _demarrerCompte();
 
+    carteSelectionnee = -1;
     setState(() {});
   }
 }
